@@ -1,6 +1,6 @@
 const path = require('path');
 
-const products = require(path.join(process.cwd(), 'server', 'data', 'products.json'));
+const products = require(path.join(__dirname, '..', 'server', 'data', 'products.json'));
 
 module.exports = (req, res) => {
     res.setHeader('Content-Type', 'application/json');
