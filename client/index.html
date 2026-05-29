@@ -2569,6 +2569,38 @@
             `).join('');
         }
 
+        async function submitForm(event) {
+            event.preventDefault();
+            const form = document.querySelector('#contact form');
+            if (!form) return;
+            const name = form.querySelector('input[type="text"]').value.trim();
+            const email = form.querySelector('input[type="email"]').value.trim();
+            const message = form.querySelector('textarea').value.trim();
+            if (!name || !email || !message) {
+                showToast('Please fill all fields before sending.');
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:5000/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, message })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Message sent! We will get back to you soon. 👍');
+                    form.reset();
+                } else {
+                    showToast('Unable to send message right now.');
+                    console.error('Contact send failed', data);
+                }
+            } catch (err) {
+                console.error('Contact request error', err);
+                showToast('Unable to send message right now.');
+            }
+        }
+
         function showToast(message) {
             const toast = document.getElementById('toast-message');
             toast.textContent = message;

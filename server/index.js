@@ -131,6 +131,32 @@ app.post('/api/auth/order-confirmation', async (req, res) => {
   }
 });
 
+// Contact form endpoint - sends message to configured CONTACT_EMAIL
+app.post('/api/contact', async (req, res) => {
+  const { name, email, message } = req.body;
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Name, email and message are required' });
+  }
+
+  const to = process.env.CONTACT_EMAIL || 'godspower1326@gmail.com';
+  const subject = `New contact message from ${name}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #1a3a52;">
+      <h3>Contact message from ${name} &lt;${email}&gt;</h3>
+      <p>${message.replace(/\n/g, '<br/>')}</p>
+      <p style="margin-top:1rem;color:#666;">— Sligy Contact Form</p>
+    </div>
+  `;
+
+  try {
+    await sendEmail({ to, subject, html, text: `${name} <${email}> says: ${message}` });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Contact email error:', error);
+    return res.status(500).json({ error: 'Unable to send contact message' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
