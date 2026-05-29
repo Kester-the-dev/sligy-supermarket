@@ -7,10 +7,14 @@ const products = require('./data/products.json');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const useSmtp = Boolean(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
-const transporter = nodemailer.createTransport(
-  useSmtp
-    ? {
+let transporter;
+let isEthereal = false;
+
+async function initTransporter() {
+  const hasSmtp = Boolean(process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+  if (hasSmtp) {
+    transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: Number(process.env.EMAIL_PORT || 587),
       secure: process.env.EMAIL_SECURE === 'true',
@@ -18,23 +22,44 @@ const transporter = nodemailer.createTransport(
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-    }
-    : {
-      sendmail: true,
-      newline: 'unix',
-      path: process.env.SENDMAIL_PATH || '/usr/sbin/sendmail',
-    }
-);
+    });
 
-transporter.verify().then(() => {
-  console.log('Mail transport ready:', useSmtp ? 'SMTP' : 'sendmail');
-}).catch(error => {
-  console.warn('Mail transport verify failed:', error.message || error);
-});
+    try {
+      await transporter.verify();
+      console.log('Mail transport ready: SMTP');
+      return;
+    } catch (error) {
+      console.warn('SMTP verify failed:', error.message || error);
+      console.warn('Falling back to Ethereal test account for email delivery.');
+    }
+  }
+
+  const testAccount = await nodemailer.createTestAccount();
+  transporter = nodemailer.createTransport({
+    host: testAccount.smtp.host,
+    port: testAccount.smtp.port,
+    secure: testAccount.smtp.secure,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+  isEthereal = true;
+  console.log('Mail transport ready: Ethereal test account');
+  console.log('Ethereal account user:', testAccount.user);
+  console.log('Ethereal account pass:', testAccount.pass);
+}
 
 async function sendEmail({ to, subject, text, html }) {
   const from = process.env.EMAIL_FROM || 'no-reply@sligy.com';
-  return transporter.sendMail({ from, to, subject, text, html });
+  const info = await transporter.sendMail({ from, to, subject, text, html });
+  const previewUrl = isEthereal ? nodemailer.getTestMessageUrl(info) : null;
+
+  if (previewUrl) {
+    console.log('Preview email URL:', previewUrl);
+  }
+
+  return { info, previewUrl };
 }
 
 // Middleware
@@ -68,8 +93,8 @@ app.post('/api/auth/welcome', async (req, res) => {
   `;
 
   try {
-    await sendEmail({ to: email, subject, html, text: `Welcome to Sligy, ${name}! Your account is ready.` });
-    return res.json({ success: true });
+    const { previewUrl } = await sendEmail({ to: email, subject, html, text: `Welcome to Sligy, ${name}! Your account is ready.` });
+    return res.json({ success: true, previewUrl });
   } catch (error) {
     console.error('Welcome email error:', error);
     return res.status(500).json({ error: 'Unable to send welcome email' });
@@ -149,8 +174,8 @@ app.post('/api/contact', async (req, res) => {
   `;
 
   try {
-    await sendEmail({ to, subject, html, text: `${name} <${email}> says: ${message}` });
-    return res.json({ success: true });
+    const { previewUrl } = await sendEmail({ to, subject, html, text: `${name} <${email}> says: ${message}` });
+    return res.json({ success: true, previewUrl });
   } catch (error) {
     console.error('Contact email error:', error);
     return res.status(500).json({ error: 'Unable to send contact message' });
@@ -158,6 +183,13 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+async function startServer() {
+  await initTransporter();
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer().catch(error => {
+  console.error('Failed to start server:', error);
 });
