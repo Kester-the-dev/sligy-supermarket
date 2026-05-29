@@ -40,3 +40,38 @@ A full-stack e-commerce website built with React (frontend) and Express.js (back
 - `npm run start-client` - Start React development server
 - `npm run start-server` - Start Express development server
 - `npm start` - Start both servers concurrently
+
+## Local network access
+
+To access the app from another device on the same Wi-Fi network, run the backend only and open the app at your machine's IP address:
+
+```bash
+cd server
+npm start
+```
+
+Then open the URL in your phone or other computer:
+
+```text
+http://<your-machine-ip>:5000/
+```
+
+Example:
+
+```text
+http://172.20.10.7:5000/
+```
+
+If you use `npm start` from the root, the React development server will run on port `3000` and that setup is not the cross-device production-style experience.
+
+## Public access from anywhere
+
+To expose your local app with a secure public URL, use `localtunnel`:
+
+```bash
+cd server
+npm install
+npm run tunnel
+```
+
+When started, `localtunnel` will print a public `https://...localtunnel.me` URL you can open from any device.
