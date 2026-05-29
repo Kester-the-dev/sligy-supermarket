@@ -2700,8 +2700,9 @@
             document.getElementById('cart-sidebar').classList.toggle('open');
         }
 
-        const API_BASE = '';
-        const ALT_API_BASE = `${window.location.protocol}//${window.location.hostname}:505`;
+        const isHttp = window.location.protocol.startsWith('http');
+        const API_BASE = isHttp ? '' : 'http://localhost:5000';
+        const ALT_API_BASE = isHttp ? `${window.location.protocol}//${window.location.hostname}:505` : 'http://localhost:505';
 
         async function fetchWithFallback(path, options = {}) {
             const primaryUrl = `${API_BASE}${path}`;
