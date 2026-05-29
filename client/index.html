@@ -2700,8 +2700,9 @@
             document.getElementById('cart-sidebar').classList.toggle('open');
         }
 
-        const API_BASE = 'http://localhost:5000';
-        const ALT_API_BASE = 'http://localhost:505';
+        const apiHost = window.location.hostname && window.location.protocol.startsWith('http') ? window.location.hostname : 'localhost';
+        const API_BASE = `http://${apiHost}:5000`;
+        const ALT_API_BASE = `http://${apiHost}:505`;
 
         async function fetchWithFallback(path, options = {}) {
             const primaryUrl = `${API_BASE}${path}`;
@@ -2737,7 +2738,7 @@
                     document.getElementById(id).innerHTML = `
                         <div class="loading" style="color: #ff4757;">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <span>Unable to load products. Ensure the backend is running on port 5000 or 505.</span>
+                            <span>Unable to load products. Ensure the backend is reachable on port 5000 or 505 from this device.</span>
                         </div>
                     `;
                 });
