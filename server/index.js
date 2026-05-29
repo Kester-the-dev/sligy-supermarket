@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
@@ -65,9 +66,14 @@ async function sendEmail({ to, subject, text, html }) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../client')));
 
 // Basic route
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/index.html'));
+});
+
+app.get('/api', (req, res) => {
   res.json({ message: 'Welcome to Sligy E-commerce API' });
 });
 
