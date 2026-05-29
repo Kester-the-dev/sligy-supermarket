@@ -1847,6 +1847,40 @@
         .footer-bottom-links a:hover {
             color: var(--accent-yellow);
         }
+
+        @media (max-width: 1024px) {
+            .footer-content {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .footer-content {
+                grid-template-columns: 1fr;
+                padding: 2rem 1.5rem 1.5rem;
+            }
+
+            .footer-section {
+                padding-bottom: 1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .footer-section:last-child {
+                border-bottom: none;
+            }
+
+            .footer-bottom-content {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 0 1.5rem;
+            }
+
+            .footer-bottom-links {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+        }
     </style>
 </head>
 
@@ -2407,7 +2441,7 @@
             window.currentUser = email;
             updateUserUI();
 
-            fetch('http://localhost:5000/api/auth/welcome', {
+            fetchWithFallback('/api/auth/welcome', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email })
@@ -2416,6 +2450,12 @@
                 .then(data => {
                     if (!data.success) {
                         console.error('Welcome email failed', data);
+                        return;
+                    }
+
+                    if (data.previewUrl) {
+                        showToast(`Account created! Preview email: ${data.previewUrl}`);
+                        console.log('Welcome email preview URL:', data.previewUrl);
                     }
                 })
                 .catch(error => console.error('Welcome email request error:', error));
@@ -2432,7 +2472,7 @@
                 return;
             }
 
-            fetch('http://localhost:5000/api/auth/forgot-password', {
+            fetchWithFallback('/api/auth/forgot-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -2519,7 +2559,7 @@
             updateCart();
             toggleCart();
 
-            fetch('http://localhost:5000/api/auth/order-confirmation', {
+            fetchWithFallback('/api/auth/order-confirmation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: window.currentUser, order })
@@ -2582,14 +2622,19 @@
             }
 
             try {
-                const res = await fetch('http://localhost:5000/api/contact', {
+                const res = await fetchWithFallback('/api/contact', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, message })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('Message sent! We will get back to you soon. 👍');
+                    let toastText = 'Message sent! We will get back to you soon. 👍';
+                    if (data.previewUrl) {
+                        toastText = `Message sent! Preview: ${data.previewUrl}`;
+                        console.log('Contact email preview URL:', data.previewUrl);
+                    }
+                    showToast(toastText);
                     form.reset();
                 } else {
                     showToast('Unable to send message right now.');
@@ -2655,6 +2700,21 @@
             document.getElementById('cart-sidebar').classList.toggle('open');
         }
 
+        const API_BASE = 'http://localhost:5000';
+        const ALT_API_BASE = 'http://localhost:505';
+
+        async function fetchWithFallback(path, options = {}) {
+            const primaryUrl = `${API_BASE}${path}`;
+            const alternateUrl = `${ALT_API_BASE}${path}`;
+
+            try {
+                return await fetch(primaryUrl, options);
+            } catch (primaryError) {
+                console.warn('Primary backend unreachable, trying alternate port 505:', primaryError);
+                return await fetch(alternateUrl, options);
+            }
+        }
+
         async function loadProducts() {
             const containers = ['products', 'featured-products'];
             containers.forEach(id => {
@@ -2667,7 +2727,7 @@
             });
 
             try {
-                const response = await fetch('http://localhost:5000/api/products');
+                const response = await fetchWithFallback('/api/products');
                 allProducts = await response.json();
                 displayProducts(allProducts, 'products');
                 displayProducts(allProducts.slice(0, 8), 'featured-products');
@@ -2677,7 +2737,7 @@
                     document.getElementById(id).innerHTML = `
                         <div class="loading" style="color: #ff4757;">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <span>Unable to load products. Ensure the server is running on port 5000.</span>
+                            <span>Unable to load products. Ensure the backend is running on port 5000 or 505.</span>
                         </div>
                     `;
                 });
