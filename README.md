@@ -75,3 +75,5 @@ npm run tunnel
 ```
 
 When started, `localtunnel` will print a public `https://...localtunnel.me` URL you can open from any device.
+
+> Note: this repo now includes a Vercel-compatible `/api/products` endpoint, so the product list can load correctly when the site is deployed as a static frontend on Vercel.
